@@ -17,6 +17,12 @@ def _stamp(raw: Any) -> datetime:
     return utcnow()
 
 
+def _optional_stamp(raw: Any) -> datetime | None:
+    if raw is None or raw == "":
+        return None
+    return _stamp(raw)
+
+
 @dataclass(frozen=True, slots=True)
 class Confirm:
     """Outcome of a strip head alignment check."""
@@ -107,13 +113,40 @@ class AcidSnapshot:
 class PumpSnapshot:
     running: bool = False
     saved: datetime = field(default_factory=utcnow)
+    totals: dict[str, float] = field(default_factory=dict)
+    segment_start: datetime | None = None
+    settled_until: datetime | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        return {"running": self.running, "saved": self.saved.isoformat()}
+        return {
+            "running": self.running,
+            "saved": self.saved.isoformat(),
+            "totals": dict(self.totals),
+            "segmentStart": (
+                self.segment_start.isoformat() if self.segment_start else None
+            ),
+            "settledUntil": (
+                self.settled_until.isoformat() if self.settled_until else None
+            ),
+        }
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "PumpSnapshot":
-        return cls(running=bool(raw.get("running", False)), saved=_stamp(raw.get("saved")))
+        totals_raw = raw.get("totals", {})
+        totals: dict[str, float] = {}
+        if isinstance(totals_raw, dict):
+            for key, value in totals_raw.items():
+                try:
+                    totals[str(key)] = max(float(value), 0.0)
+                except (TypeError, ValueError):
+                    continue
+        return cls(
+            running=bool(raw.get("running", False)),
+            saved=_stamp(raw.get("saved")),
+            totals=totals,
+            segment_start=_optional_stamp(raw.get("segmentStart")),
+            settled_until=_optional_stamp(raw.get("settledUntil")),
+        )
 
 
 @dataclass(frozen=True, slots=True)

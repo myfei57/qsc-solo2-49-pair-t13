@@ -127,7 +127,7 @@ def test_collect_reports_only_present_snapshots(tmp_path) -> None:
     assert state.track.seam_id == "s"
     assert state.rinse.active is True
     assert state.latch.interlock is True
-    assert state.run_seconds == pytest.approx(120.0)
+    assert state.legacy_run_seconds == pytest.approx(120.0)
     assert KEY_WELD not in state.loaded
     assert state.to_dict()["gain"] == 0.0
 

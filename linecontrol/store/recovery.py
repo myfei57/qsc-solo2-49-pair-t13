@@ -40,7 +40,7 @@ class Recovery:
     rinse: RinseSnapshot = field(default_factory=RinseSnapshot)
     latch: LatchSnapshot = field(default_factory=LatchSnapshot)
     weld: WeldRecord = field(default_factory=WeldRecord)
-    run_seconds: float = 0.0
+    legacy_run_seconds: float = 0.0
     loaded: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
@@ -53,7 +53,7 @@ class Recovery:
             "rinse": self.rinse.to_dict(),
             "latch": self.latch.to_dict(),
             "weld": self.weld.to_dict(),
-            "runSeconds": self.run_seconds,
+            "runSeconds": self.legacy_run_seconds,
             "loaded": list(self.loaded),
         }
 
@@ -88,7 +88,7 @@ def collect(store: FileStore) -> Recovery:
     recovery.weld, ok = load_json(store, KEY_WELD, WeldRecord)
     if ok:
         present.append(KEY_WELD)
-    recovery.run_seconds = load_float(store, KEY_HOURS)
+    recovery.legacy_run_seconds = load_float(store, KEY_HOURS)
     if store.exists(KEY_HOURS):
         present.append(KEY_HOURS)
     recovery.loaded = tuple(present)

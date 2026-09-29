@@ -28,6 +28,7 @@ def main(argv: list[str] | None = None) -> int:
     logging.getLogger("linecontrol").info(
         "recovered %d snapshots", len(recovery.loaded)
     )
+    line.pump.start_ticker()
     app = create_app(line, config.web_root())
     serve(config, app)
     return 0

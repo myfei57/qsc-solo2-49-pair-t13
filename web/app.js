@@ -34,6 +34,36 @@ function post(path, params) {
   return loadJSON(path + query, { method: "POST", headers: { Accept: "application/json" } });
 }
 
+function fmtDuration(seconds) {
+  const s = Math.round(seconds || 0);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const rest = s % 60;
+  const pad = function (v) { return String(v).padStart(2, "0"); };
+  return h + ":" + pad(m) + ":" + pad(rest);
+}
+
+function renderPumpShifts(shift) {
+  if (!shift) {
+    return;
+  }
+  setText("pumpShift", shift.current ? shift.current.label : "-");
+  setText("pumpShiftSec", fmtDuration(shift.currentSeconds));
+  setText("pumpRunTotal", fmtDuration(shift.totalSeconds));
+  const list = document.getElementById("pumpShiftList");
+  if (!list || !shift.shifts) {
+    return;
+  }
+  list.innerHTML = "";
+  shift.shifts.forEach(function (entry) {
+    const li = document.createElement("li");
+    const start = new Date(entry.start);
+    const stamp = start.toLocaleString();
+    li.textContent = entry.label + " (" + stamp + ") " + fmtDuration(entry.seconds);
+    list.appendChild(li);
+  });
+}
+
 function setText(id, value) {
   const node = document.getElementById(id);
   if (node) {
@@ -55,6 +85,7 @@ function renderState(state) {
   setText("level", fmt(state.pickle ? state.pickle.level : 0, 2));
   setText("rinsing", state.pickle && state.pickle.rinsing ? "开" : "关");
   setText("pump", state.pump && state.pump.running ? "运行" : "停");
+  renderPumpShifts(state.pump ? state.pump.shift : null);
   setText("dry", state.dry && state.dry.heating ? "升温" : "停");
   setText("tail", state.strip && state.strip.tailDirty ? "脏" : "净");
   setText("speed", fmt(state.strip ? state.strip.speed : 0, 2));
@@ -130,8 +161,12 @@ async function refresh() {
     const data = await loadJSON("/api/state");
     renderState(data.state || {});
     renderSequence(data.state ? data.state.sequence : null);
-    const summary = await loadJSON("/api/audit/summary");
+    const [summary, shifts] = await Promise.all([
+      loadJSON("/api/audit/summary"),
+      loadJSON("/api/pump/shifts?limit=5"),
+    ]);
     renderSummary(summary.summary || {});
+    renderPumpShifts(shifts.report || null);
   } catch (error) {
     console.error(error);
   }

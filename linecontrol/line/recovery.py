@@ -29,7 +29,9 @@ class RecoveryOps:
         self.pickle.restore_acid(state.acid)
         self.pickle.restore_rinse(state.rinse.active)
         self.pump.restore(state.pump)
-        self.pump.restore_run(state.run_seconds)
+        # Pre-shift installs kept a single grand total; fold it into a legacy
+        # bucket once so the number is neither lost nor double counted.
+        self.pump.import_legacy_hours(state.legacy_run_seconds)
         self.strip.restore_track(state.track)
         self.audit.restore()
         self.audit.flush()

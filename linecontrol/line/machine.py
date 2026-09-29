@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from datetime import datetime
 from pathlib import Path
 
 from ..audit.logger import Logger
@@ -12,6 +14,7 @@ from ..entry.controller import Controller as EntryController
 from ..exit.section import Exit
 from ..pickle.tank import Tank
 from ..pump.pump import Pump
+from ..pump.schedule import ShiftSchedule
 from ..store.filestore import FileStore
 from ..strip.strip import Strip
 from ..tension.roller import Roller
@@ -30,7 +33,12 @@ DEFAULT_SETPOINT = 80.0
 class Line(WorkflowOps, CommandOps, RecoveryOps, ViewOps):
     """Owns the equipment areas and the cross-area call chains."""
 
-    def __init__(self, data_dir: str | Path) -> None:
+    def __init__(
+        self,
+        data_dir: str | Path,
+        clock: Callable[[], datetime] | None = None,
+        shift_schedule: ShiftSchedule | None = None,
+    ) -> None:
         self.store = FileStore(Path(data_dir) / "snap")
         self.bus = EventBus()
         self.audit = Logger(self.store, self.bus)
@@ -38,7 +46,14 @@ class Line(WorkflowOps, CommandOps, RecoveryOps, ViewOps):
         self.tension = Roller(self.store)
         self.pickle = Tank(self.store, self.bus)
         self.strip = Strip(self.store, self.bus, self.tension.gain, self.pickle.flushed)
-        self.pump = Pump(self.pickle, self.store, self.bus, self.strip.stopped)
+        self.pump = Pump(
+            self.pickle,
+            self.store,
+            self.bus,
+            self.strip.stopped,
+            schedule=shift_schedule,
+            clock=clock,
+        )
         self.exit = Exit(self.pickle, self.strip, self.bus)
         self.dry = Dryer(self.exit.exhaust_ok, self.bus)
         self.weld = Welder(self.entry.confirm_state, self.store, self.bus)

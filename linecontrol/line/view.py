@@ -19,6 +19,9 @@ class ViewOps:
     def close(self) -> None:
         """Release the line's own bus subscriptions."""
 
+        self.pump.stop_ticker()
+        # Settle through "now" first so a graceful restart loses no run time.
+        self.pump.flush()
         for unsubscribe in self._audit_unsubscribe:
             unsubscribe()
         self._audit_unsubscribe = []
@@ -86,7 +89,7 @@ class ViewOps:
             "gain": self.tension.gain(),
             "effectiveTension": self.tension.data.effective_tension(),
             "pumpRunSec": self.pump.run_seconds(),
-            "pumpHoursPersisted": self.pump.persisted_hours(),
+            "pumpShifts": self.pump.shift_report(),
             "pumpPersist": pump_state.running,
             "pumpPersistOk": pump_ok,
             "pumpStarted": (

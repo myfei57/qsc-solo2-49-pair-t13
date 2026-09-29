@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from ..domain.events import Event
 from ..domain.kinds import EventKind
-from ..domain.records import utcnow
 from .errors import PumpError, PumpErrorCode
 
 
@@ -19,10 +18,6 @@ class StopOps:
 
     def stop(self) -> None:
         self.stop_gate()
-        if self.data.started_at is not None:
-            elapsed = (utcnow() - self.data.started_at).total_seconds()
-            self.record_run(max(elapsed, 0.0))
-        self.data.started_at = None
         self.data.machine.enter("stopped")
-        self._save_state()
+        self._close_segment(self._clock())
         self.bus.publish(Event(kind=EventKind.PUMP, source="pump", message="stopped"))
