@@ -31,7 +31,10 @@ class StartOps:
         self._begin_run("resumed")
 
     def _begin_run(self, message: str) -> None:
+        now = utcnow()
+        if self.running() and self.data.started_at is not None:
+            self._settle_through(now, persist=False)
         self.data.machine.enter("running")
-        self.data.started_at = utcnow()
+        self.data.started_at = now
         self._save_state()
         self.bus.publish(Event(kind=EventKind.PUMP, source="pump", message=message))

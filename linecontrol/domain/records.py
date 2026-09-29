@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from .events import utcnow
@@ -11,10 +11,24 @@ from .events import utcnow
 
 def _stamp(raw: Any) -> datetime:
     if isinstance(raw, datetime):
-        return raw
-    if isinstance(raw, str):
-        return datetime.fromisoformat(raw)
-    return utcnow()
+        stamp = raw
+    elif isinstance(raw, str):
+        stamp = datetime.fromisoformat(raw)
+    else:
+        stamp = utcnow()
+    if stamp.tzinfo is None:
+        stamp = stamp.replace(tzinfo=timezone.utc)
+    return stamp
+
+
+def _optional_stamp(raw: Any) -> datetime | None:
+    if raw in (None, ""):
+        return None
+    return _stamp(raw)
+
+
+def _number_like(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,14 +120,40 @@ class AcidSnapshot:
 @dataclass(frozen=True, slots=True)
 class PumpSnapshot:
     running: bool = False
+    run_seconds: float = 0.0
+    started_at: datetime | None = None
+    shift_seconds: dict[str, float] = field(default_factory=dict)
     saved: datetime = field(default_factory=utcnow)
 
     def to_dict(self) -> dict[str, Any]:
-        return {"running": self.running, "saved": self.saved.isoformat()}
+        return {
+            "running": self.running,
+            "run_seconds": self.run_seconds,
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "shift_seconds": dict(self.shift_seconds),
+            "saved": self.saved.isoformat(),
+        }
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "PumpSnapshot":
-        return cls(running=bool(raw.get("running", False)), saved=_stamp(raw.get("saved")))
+        shifts = raw.get("shift_seconds", {})
+        if not isinstance(shifts, dict):
+            shifts = {}
+        try:
+            run_seconds = float(raw.get("run_seconds", 0.0))
+        except (TypeError, ValueError):
+            run_seconds = 0.0
+        return cls(
+            running=bool(raw.get("running", False)),
+            run_seconds=max(run_seconds, 0.0),
+            started_at=_optional_stamp(raw.get("started_at")),
+            shift_seconds={
+                str(key): max(float(value), 0.0)
+                for key, value in shifts.items()
+                if _number_like(value)
+            },
+            saved=_stamp(raw.get("saved")),
+        )
 
 
 @dataclass(frozen=True, slots=True)

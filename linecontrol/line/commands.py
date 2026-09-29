@@ -64,6 +64,11 @@ class CommandOps:
         self.pickle.level_check(sample)
         self.pump.resume()
 
+    def close_pump_shift(self) -> dict[str, object]:
+        """Settle pump time at hand-over without stopping the pump."""
+
+        return self.pump.settle_shift()
+
     def calibrate_acid(self, offset: float) -> None:
         self.pickle.calibrate(offset)
 

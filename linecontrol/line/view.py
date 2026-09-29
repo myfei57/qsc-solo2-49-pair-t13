@@ -86,6 +86,7 @@ class ViewOps:
             "gain": self.tension.gain(),
             "effectiveTension": self.tension.data.effective_tension(),
             "pumpRunSec": self.pump.run_seconds(),
+            "pumpShifts": self.pump.shift_report(),
             "pumpHoursPersisted": self.pump.persisted_hours(),
             "pumpPersist": pump_state.running,
             "pumpPersistOk": pump_ok,

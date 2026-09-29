@@ -50,6 +50,15 @@ def test_domain_failure_is_a_conflict(client: FlaskClient) -> None:
     assert body["detail"]["code"] == "level-low"
 
 
+def test_pump_shift_close_endpoint(client: FlaskClient) -> None:
+    response = client.post("/api/pump/shift-close")
+    assert response.status_code == 200
+    body = response.get_json()
+    assert body["ok"] is True
+    assert body["shifts"]["current"]["label"] in {"A", "B", "C"}
+    assert body["shifts"]["currentSeconds"] == 0
+
+
 def test_cycle_endpoint_runs_the_line(client: FlaskClient) -> None:
     response = client.post(
         "/api/cycle",

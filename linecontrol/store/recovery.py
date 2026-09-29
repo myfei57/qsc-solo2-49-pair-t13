@@ -41,6 +41,7 @@ class Recovery:
     latch: LatchSnapshot = field(default_factory=LatchSnapshot)
     weld: WeldRecord = field(default_factory=WeldRecord)
     run_seconds: float = 0.0
+    pump_accounting: bool = False
     loaded: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, object]:
@@ -54,6 +55,7 @@ class Recovery:
             "latch": self.latch.to_dict(),
             "weld": self.weld.to_dict(),
             "runSeconds": self.run_seconds,
+            "pumpAccounting": self.pump_accounting,
             "loaded": list(self.loaded),
         }
 
@@ -73,8 +75,8 @@ def collect(store: FileStore) -> Recovery:
     recovery.acid, ok = load_json(store, KEY_ACID, AcidSnapshot)
     if ok:
         present.append(KEY_ACID)
-    recovery.pump, ok = load_json(store, KEY_PUMP, PumpSnapshot)
-    if ok:
+    recovery.pump, pump_ok = load_json(store, KEY_PUMP, PumpSnapshot)
+    if pump_ok:
         present.append(KEY_PUMP)
     recovery.track, ok = load_json(store, KEY_TRACK, TrackSnapshot)
     if ok:
@@ -88,7 +90,15 @@ def collect(store: FileStore) -> Recovery:
     recovery.weld, ok = load_json(store, KEY_WELD, WeldRecord)
     if ok:
         present.append(KEY_WELD)
-    recovery.run_seconds = load_float(store, KEY_HOURS)
+    legacy_hours = load_float(store, KEY_HOURS)
+    recovery.pump_accounting = bool(
+        recovery.pump.shift_seconds
+        or recovery.pump.started_at is not None
+        or recovery.pump.run_seconds > 0.0
+    )
+    recovery.run_seconds = (
+        recovery.pump.run_seconds if recovery.pump_accounting else legacy_hours
+    )
     if store.exists(KEY_HOURS):
         present.append(KEY_HOURS)
     recovery.loaded = tuple(present)

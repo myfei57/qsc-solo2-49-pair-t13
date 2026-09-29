@@ -29,7 +29,8 @@ class RecoveryOps:
         self.pickle.restore_acid(state.acid)
         self.pickle.restore_rinse(state.rinse.active)
         self.pump.restore(state.pump)
-        self.pump.restore_run(state.run_seconds)
+        if not state.pump_accounting and state.run_seconds:
+            self.pump.restore_run(state.run_seconds, persist=True)
         self.strip.restore_track(state.track)
         self.audit.restore()
         self.audit.flush()

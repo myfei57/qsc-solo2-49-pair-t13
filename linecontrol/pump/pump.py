@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from ..bus import EventBus
+from ..domain.shift import ShiftSchedule
 from ..pickle.tank import Tank
 from ..store.filestore import FileStore
 from .replenish import ReplenishOps
@@ -24,11 +25,13 @@ class Pump(StartOps, StopOps, ReplenishOps, RunHourOps, StatusOps):
         store: FileStore,
         bus: EventBus,
         strip_stopped: Callable[[], bool],
+        shifts: ShiftSchedule | None = None,
     ) -> None:
         self._tank = tank
         self._store = store
         self._bus = bus
         self._strip_stopped = strip_stopped
+        self._shifts = shifts or ShiftSchedule()
         self._state = PumpData()
 
     @property
@@ -44,6 +47,10 @@ class Pump(StartOps, StopOps, ReplenishOps, RunHourOps, StatusOps):
         return self._bus
 
     @property
+    def shifts(self) -> ShiftSchedule:
+        return self._shifts
+
+    @property
     def data(self) -> PumpData:
         return self._state
 
@@ -55,6 +62,8 @@ class Pump(StartOps, StopOps, ReplenishOps, RunHourOps, StatusOps):
         return {
             "running": self.running(),
             "runSec": self.run_seconds(),
+            "shiftRunSec": self.shift_run_seconds(),
+            "currentShift": self.current_shift().to_dict(),
             "persisted": persisted.running,
             "startedAt": self.started_at().isoformat() if self.started_at() else None,
             "transitions": list(self.data.machine.history()),

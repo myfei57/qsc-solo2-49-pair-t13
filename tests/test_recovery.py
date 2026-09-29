@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from linecontrol.domain.records import PumpSnapshot, RinseSnapshot, TensionSnapshot
@@ -43,6 +44,33 @@ def test_recovery_rebuilds_every_controller(tmp_path: Path) -> None:
     assert recovered.pickle.offset() == 0.75
     assert recovered.weld.interlock_ok() is False
     assert recovered.pickle.rinsing() is False
+
+
+def test_recovery_splits_and_checkpoints_a_running_pump(
+    tmp_path: Path, monkeypatch
+) -> None:
+    china_time = timezone(timedelta(hours=8))
+    start = datetime(2026, 1, 1, 7, 50, tzinfo=china_time)
+    recovered_at = datetime(2026, 1, 1, 8, 10, tzinfo=china_time)
+    monkeypatch.setattr("linecontrol.pump.runhours.utcnow", lambda: recovered_at)
+
+    line = Line(tmp_path)
+    line.recover()
+    save_json(
+        line.store,
+        KEY_PUMP,
+        PumpSnapshot(running=True, started_at=start),
+    )
+
+    recovered = Line(tmp_path)
+    recovered.recover()
+
+    assert recovered.pump.data.shift_seconds == {
+        "2026-01-01-A": 600.0,
+        "2026-01-01-B": 600.0,
+    }
+    assert recovered.pump.started_at() == recovered_at
+    assert recovered.pump.persisted_hours() == 1200.0
 
 
 def test_recovery_stops_a_restored_rinse_and_lifts_rolls(tmp_path: Path) -> None:

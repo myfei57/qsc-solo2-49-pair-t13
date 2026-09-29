@@ -211,6 +211,9 @@ class Api:
         self.line.resume_acid_loop(float_param(request, "level"))
         return {"ok": True}
 
+    def pump_shift_close(self, request: Request) -> dict[str, object]:
+        return {"ok": True, "shifts": self.line.close_pump_shift()}
+
     def pump_replenish(self, request: Request) -> dict[str, object]:
         plan = self.line.replenish_acid(
             float_param(request, "volume"),

@@ -46,6 +46,7 @@ def _route_table(api: Api) -> tuple[tuple[str, str, Handler], ...]:
         ("/api/tension/persisted", "GET", api.tension_persisted),
         ("/api/pump/start", "POST", api.pump_start),
         ("/api/pump/resume", "POST", api.pump_resume),
+        ("/api/pump/shift-close", "POST", api.pump_shift_close),
         ("/api/pump/replenish", "POST", api.pump_replenish),
         ("/api/pickle/calibrate", "POST", api.pickle_calibrate),
         ("/api/dry/heat", "POST", api.dry_heat),

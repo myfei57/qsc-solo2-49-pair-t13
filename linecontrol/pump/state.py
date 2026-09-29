@@ -27,6 +27,7 @@ def new_pump_machine() -> StateMachine:
 class PumpData:
     started_at: datetime | None = None
     run_seconds: float = 0.0
+    shift_seconds: dict[str, float] = field(default_factory=dict)
     machine: StateMachine = field(default_factory=new_pump_machine)
 
     def running(self) -> bool:

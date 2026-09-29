@@ -19,10 +19,7 @@ class StopOps:
 
     def stop(self) -> None:
         self.stop_gate()
-        if self.data.started_at is not None:
-            elapsed = (utcnow() - self.data.started_at).total_seconds()
-            self.record_run(max(elapsed, 0.0))
-        self.data.started_at = None
+        self.close_run(utcnow())
         self.data.machine.enter("stopped")
         self._save_state()
         self.bus.publish(Event(kind=EventKind.PUMP, source="pump", message="stopped"))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ..domain.records import PumpSnapshot, utcnow
 from ..store.keys import KEY_PUMP
-from ..store.snapshot import load_json, save_json
+from ..store.snapshot import load_json
 
 
 class StatusOps:
@@ -14,16 +14,13 @@ class StatusOps:
         return self.data.running()
 
     def restore(self, snapshot: PumpSnapshot) -> None:
-        """Rebuild the run state read back from disk."""
+        """Rebuild the run state and accounting read back from disk."""
 
         self.data.machine.force("running" if snapshot.running else "stopped")
+        self.restore_run_state(snapshot)
 
     def persisted(self) -> tuple[PumpSnapshot, bool]:
         return load_json(self.store, KEY_PUMP, PumpSnapshot)
 
     def _save_state(self) -> None:
-        save_json(
-            self.store,
-            KEY_PUMP,
-            PumpSnapshot(running=self.running(), saved=utcnow()),
-        )
+        self._persist_run(utcnow())
